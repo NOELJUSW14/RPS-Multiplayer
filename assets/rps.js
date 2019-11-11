@@ -12,17 +12,15 @@ var firebaseConfig = {
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 var database = firebase.database()
-database.ref().set({
-    message: 'hello world!',
-    message: 'forever'
-})
+//database.ref().set({
+    // message: 'hello world!',
+    // message: 'forever'
+//})
 //set up variable array
 var trainSchedule = [];
 var trainName = "";
 var destination = "";
-
-var arrival = "0";
-
+var firstArrival = "0";
 var frequency = "";
 
 //set up functions
@@ -50,23 +48,27 @@ $('#submit').on('click', function (event) {
     .val()
     .trim();
 
+    arrival = $('#arrivalInput')
+    .val()
+    .trim();
+
     //push info to firebase database
     database.ref().push({
         name: trainName,
         destination: destination,
-        frequency: frequency, 
+        frequency: frequency,
+        arrival: arrival, 
         dateAdded: firebase.database.ServerValue.TIMESTAMP
     })
 
-    console.log(newTrain.name)
-    console.log(newTrain.dest)
-    console.log(newTrain.freq)
+    
 
     //alert notificaton once train is added to table/database
     alert('New Train Schedule successfully added!');
 
     $('#trainInput').val("");
     $('#destInput').val("");
+    $('#arrivalInput').val("");
     $('#freqInput').val("");
 
 })
@@ -74,20 +76,33 @@ $('#submit').on('click', function (event) {
 
 
 //get info back from firebase to populate page
-database.ref().on('child_added', function (snapshot) {
+database.ref().on('child_added', function (childSnapshot) {
 
-    console.log(snapshot)
+    console.log(childSnapshot)
 
-    trainName = snapshot.val().name;
+    trainName = childSnapshot.val().name;
 
-    destination = snapshot.val().dest;
+    destination = childSnapshot.val().destination;
+    arrival = childSnapshot.val().arrival;
 
-    frequency = snapshot.val().freq;
+    frequency = childSnapshot.val().frequency;
 
+    var firstArrivalConverted = moment(firstArrival, "HH:mm").subtract(1, "years");
+    var currentTime = moment();
+    var diffTime = moment().diff(moment(firstArrivalConverted), "minutes");
+    var remainder = diffTime % frequency;
+    var minAway = frequency - remainder;
+    var nextTrain = moment().add(minAway,"minutes");
+    var trainReady = moment(nextTrain).format("HH:mm");
+
+    
 
     console.log(trainName)
     console.log(destination)
     console.log(frequency)
+    console.log(arrival)
+    console.log(diffTime)
+    console.log("current time:" + moment(currentTime).format("HH:mm"))
 
     //  function nextTrain() { };
     //  function minutesAway(){};
@@ -97,10 +112,15 @@ database.ref().on('child_added', function (snapshot) {
         $("<td>").text(trainName),
         $("<td>").text(destination),
         $("<td>").text(frequency),
+        $("<td>").text(trainReady),
+        $("<td>").text(minAway)
     );
 
     //adding the new row to the table body
-    $('#train-schedule').append("");
+    $('#train-schedule').append(newRow);
+
+    $("#trainName, #destination,#arrival").val("");
+    return false;
 
 })
 
